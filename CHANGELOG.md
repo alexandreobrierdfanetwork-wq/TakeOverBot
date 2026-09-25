@@ -4,6 +4,18 @@ All notable changes to `TakeOverBot` will be documented in this file.
 
 Updates should follow the [Keep a CHANGELOG](https://keepachangelog.com/) principles.
 
+## Unreleased
+
+### Added
+- `/voterappel` command
+  - **Admin and Staff Only**
+  - Relance manuellement les membres du rôle cible qui n'ont pas voté, dans le salon du sondage.
+  - Option `message_id` pour cibler un sondage précis ; sinon le dernier sondage actif du salon.
+
+### Fixed
+- Les rappels automatiques de vote (mi-durée et expiration) envoient désormais les mentions par lots, avec `AllowedMentions` explicites, pour que les @ notifient réellement même avec beaucoup de membres.
+- Les erreurs de rappel de vote sont loguées dans le salon logs (et Sentry si activé) au lieu d'être uniquement écrites en console.
+
 ## 2026.4.1-hotfix2 - 10/04/2026
 
 ### Fixed
