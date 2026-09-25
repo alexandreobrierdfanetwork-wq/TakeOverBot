@@ -114,12 +114,12 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
             return null;
 
         var expiresAt = discordPoll.ExpiresAt.ToUnixTimeSeconds();
-        if (expiresAt <= 0)
-            return null;
-
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         if (expiresAt <= now)
+        {
+            Console.WriteLine($"[VoteService] Poll {message.Id} déjà clos (expires {expiresAt}, now {now}).");
             return null;
+        }
 
         var guildId = TryGetGuildId(message);
         if (guildId == 0)
@@ -227,8 +227,7 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
     {
         try
         {
-            IMessageChannel? channel = discordClient.GetChannel(KnownPollChannelId) as IMessageChannel;
-            channel ??= await discordClient.Rest.GetChannelAsync(KnownPollChannelId) as IMessageChannel;
+            var channel = await discordClient.Rest.GetChannelAsync(KnownPollChannelId) as IMessageChannel;
             if (channel is null)
             {
                 Console.WriteLine($"[VoteService] Salon {KnownPollChannelId} introuvable pour l'import.");
@@ -240,6 +239,9 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
                 Console.WriteLine($"[VoteService] Message {KnownPollMessageId} introuvable.");
                 return;
             }
+
+            Console.WriteLine(
+                $"[VoteService] Message connu poll={(message.Poll is null ? "null" : "oui")} expires={message.Poll?.ExpiresAt.ToString() ?? "-"}");
 
             var upserted = await UpsertPollFromMessageAsync(message);
             Console.WriteLine(upserted is null
