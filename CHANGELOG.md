@@ -19,6 +19,7 @@ Updates should follow the [Keep a CHANGELOG](https://keepachangelog.com/) princi
 ### Fixed
 - Les rappels ne se limitent plus aux sondages créés via `/vote` ni au rôle Staff/Admin.
 - Mentions envoyées par lots avec `AllowedMentions` explicites.
+- La sync des rôles vers le site est **désactivée par défaut** (`WEBSITE_ENABLE_ROLE_UPDATE=false`) et ignorée si l'URL ou l'endpoint est vide, pour éviter le spam bot-log quand `api.takeovermotorsport.com` n'existe pas en DNS.
 
 ## 2026.4.1-hotfix2 - 10/04/2026
 

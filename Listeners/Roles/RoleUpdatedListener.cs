@@ -31,14 +31,19 @@ public class RoleUpdatedListener : IListener
 
     private static async Task UpdateWebRoles(SocketGuild guild)
     {
-        if(!bool.Parse(Environment.GetEnvironmentVariable("WEBSITE_ENABLE_ROLE_UPDATE") ?? "true"))
+        if (!bool.TryParse(Environment.GetEnvironmentVariable("WEBSITE_ENABLE_ROLE_UPDATE"), out var enableRoleUpdate) || !enableRoleUpdate)
+            return;
+
+        var baseUrl = Environment.GetEnvironmentVariable("WEBSITE_BASE_URL");
+        var endpoint = Environment.GetEnvironmentVariable("WEBSITE_ROLE_UPDATE_ENDPOINT");
+        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(endpoint))
             return;
 
         var updatedRoles = guild.Roles.Select(
             role => new UpdatedRole { Id = role.Id.ToString(), Name = role.Name, Color = role.Colors.PrimaryColor.ToString() }
         ).ToList();
 
-        var url = $"{Environment.GetEnvironmentVariable("WEBSITE_BASE_URL")}{Environment.GetEnvironmentVariable("WEBSITE_ROLE_UPDATE_ENDPOINT")}";
+        var url = $"{baseUrl}{endpoint}";
 
         var handler = new HttpClientHandler();
 
