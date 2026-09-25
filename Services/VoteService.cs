@@ -241,7 +241,9 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
             }
 
             Console.WriteLine(
-                $"[VoteService] Message connu poll={(message.Poll is null ? "null" : "oui")} expires={message.Poll?.ExpiresAt.ToString() ?? "-"}");
+                $"[VoteService] Message connu type={message.Type} flags={message.Flags} " +
+                $"poll={(message.Poll is null ? "null" : "oui")} expires={message.Poll?.ExpiresAt.ToString() ?? "-"} " +
+                $"clr={message.GetType().Name}");
 
             var upserted = await UpsertPollFromMessageAsync(message);
             Console.WriteLine(upserted is null
