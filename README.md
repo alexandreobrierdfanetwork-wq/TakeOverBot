@@ -17,7 +17,7 @@ This bot will probably don't have a lot of command as it needs to be basic to us
 - **Admin** : `/clearuser {user} {duration} {days or hours}` Clear messages from a user in every channel until a specified time.
 - **Admin** : `/mute {user} {duration} {days or hours}` Mute a user for a specific duration.
 - **Admin or Staff** : `/vote {staff or admin} {question} {choices (separated by commas)} {duration} {enable multi select}` Create a poll with reminder.
-- **Admin or Staff** : `/voterappel {message id (optional)}` Ping members of the target role who have not voted yet. Use it in a vote channel; without `message_id` it targets the latest active poll in that channel.
+- **Admin or Staff** : `/rappelvote {message id (optional)}` Ping and DM members who can see the channel and have not voted. Without `message_id` it targets the latest active poll in the current channel. Automatic reminders also run 72h, 24h and 3h before a poll ends.
 - **Admin or Perm Bot** : `/send {channel} {message}` Send a message as the bot only if the user as a specific role.
 - `/contact {staff or admin}` Create a specific channel for the user to contact the staff or the admin.
 - `/endContact` Close the contact channel.

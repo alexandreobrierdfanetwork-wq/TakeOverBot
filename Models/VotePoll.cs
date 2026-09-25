@@ -16,14 +16,17 @@ public class VotePoll
     [Required]
     public ulong MessageId { get; set; }
 
-    [Required]
     public ulong TargetRoleId { get; set; }
+
+    [Required]
+    public long CreatedAt { get; set; }
 
     [Required]
     public long ExpiresAt { get; set; }
 
-    [Required]
-    public long RemindAt { get; set; }
+    public bool Remind72Sent { get; set; }
 
-    public bool ReminderSent { get; set; } = false;
+    public bool Remind24Sent { get; set; }
+
+    public bool Remind3Sent { get; set; }
 }

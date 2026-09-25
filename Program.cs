@@ -104,6 +104,7 @@ client.Log += msg =>
 client.Ready += async () =>
 {
     await handler.RegisterCommandsAsync();
+    await voteService.OnReadyAsync();
     Console.WriteLine("Commandes et listeners enregistrés !");
 };
 

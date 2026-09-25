@@ -7,14 +7,17 @@ Updates should follow the [Keep a CHANGELOG](https://keepachangelog.com/) princi
 ## Unreleased
 
 ### Added
-- `/voterappel` command
+- `/rappelvote` command
   - **Admin and Staff Only**
-  - Relance manuellement les membres du rôle cible qui n'ont pas voté, dans le salon du sondage.
-  - Option `message_id` pour cibler un sondage précis ; sinon le dernier sondage actif du salon.
+  - Relance les membres qui **voient le salon** et n'ont pas voté : @ dans le salon + message privé avec le lien du sondage.
+  - Option `message_id` pour cibler n'importe quel sondage du serveur (y compris un sondage Discord natif).
+  - Sans option : dernier sondage actif du salon.
+- Découverte automatique de tous les sondages Discord du serveur (scan, nouveaux messages, import du sondage existant).
+- Rappels automatiques **72 h, 24 h et 3 h** avant la fin d'un sondage non clos (si la durée le permet).
 
 ### Fixed
-- Les rappels automatiques de vote (mi-durée et expiration) envoient désormais les mentions par lots, avec `AllowedMentions` explicites, pour que les @ notifient réellement même avec beaucoup de membres.
-- Les erreurs de rappel de vote sont loguées dans le salon logs (et Sentry si activé) au lieu d'être uniquement écrites en console.
+- Les rappels ne se limitent plus aux sondages créés via `/vote` ni au rôle Staff/Admin.
+- Mentions envoyées par lots avec `AllowedMentions` explicites.
 
 ## 2026.4.1-hotfix2 - 10/04/2026
 

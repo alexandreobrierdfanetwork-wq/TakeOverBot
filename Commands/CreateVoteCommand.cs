@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using TakeOverBot.Interfaces;
 using TakeOverBot.Models;
+using TakeOverBot.Services;
 
 namespace TakeOverBot.Commands;
 
@@ -12,7 +13,7 @@ namespace TakeOverBot.Commands;
 /// This command will also save the poll in the database for later relance.
 /// </summary>
 /// <param name="scopeFactory">Used to get DbContext</param>
-public class CreateVoteCommand(IServiceScopeFactory scopeFactory) : ISlashCommand
+public class CreateVoteCommand(IServiceScopeFactory scopeFactory, VoteService voteService) : ISlashCommand
 {
     public string Name => "vote";
     public string Icon => "🗳️";
@@ -116,28 +117,31 @@ public class CreateVoteCommand(IServiceScopeFactory scopeFactory) : ISlashComman
 
         await channel.SendMessageAsync(text: targetRole!.Mention, poll: poll);
 
-        // Persist the poll in the database for later relance
         var sentMessages = await channel.GetMessagesAsync(1).FlattenAsync();
         var sentMessage = sentMessages.First();
 
-        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var expiresAt = now + duree * 3600;
-        var remindAt = now + duree * 3600 / 2;
-
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        dbContext.VotePolls.Add(new VotePoll
+        if (sentMessage is IUserMessage userMessage)
         {
-            GuildId = guild.Id,
-            ChannelId = channel.Id,
-            MessageId = sentMessage.Id,
-            TargetRoleId = targetRole.Id,
-            ExpiresAt = expiresAt,
-            RemindAt = remindAt
-        });
+            await voteService.UpsertPollFromMessageAsync(userMessage, targetRole.Id);
+        }
+        else
+        {
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        await dbContext.SaveChangesAsync();
+            dbContext.VotePolls.Add(new VotePoll
+            {
+                GuildId = guild.Id,
+                ChannelId = channel.Id,
+                MessageId = sentMessage.Id,
+                TargetRoleId = targetRole.Id,
+                CreatedAt = now,
+                ExpiresAt = now + duree * 3600
+            });
+
+            await dbContext.SaveChangesAsync();
+        }
 
         await command.FollowupAsync($"✅ Sondage créé avec **{answers.Count} choix** dans {channel.Mention} !", ephemeral: true);
     }

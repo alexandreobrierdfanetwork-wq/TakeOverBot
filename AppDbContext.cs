@@ -10,6 +10,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Token> Tokens => Set<Token>();
     public DbSet<VotePoll> VotePolls => Set<VotePoll>();
     public DbSet<PendingPost> PendingPosts => Set<PendingPost>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<VotePoll>()
+            .HasIndex(p => p.MessageId)
+            .IsUnique();
+    }
 }
 
 public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
