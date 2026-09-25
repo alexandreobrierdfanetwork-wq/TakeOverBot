@@ -87,7 +87,7 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
             .FirstOrDefaultAsync();
     }
 
-    public async Task<VotePoll?> ResolvePollAsync(SocketGuild guild, SocketTextChannel channel, ulong? messageId)
+    public async Task<VotePoll?> ResolvePollAsync(SocketGuild guild, IMessageChannel channel, ulong? messageId)
     {
         if (messageId.HasValue)
         {
@@ -169,8 +169,8 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
             if (guild is null)
                 return await FailAsync(null, $"Serveur introuvable pour le sondage {poll.Id}.");
 
-            var channel = guild.GetTextChannel(poll.ChannelId);
-            if (channel is null)
+            var guildChannel = guild.GetChannel(poll.ChannelId) as SocketGuildChannel;
+            if (guildChannel is not IMessageChannel channel)
                 return await FailAsync(guild, $"Salon introuvable pour le sondage {poll.Id}.");
 
             var message = await channel.GetMessageAsync(poll.MessageId) as IUserMessage;
@@ -180,7 +180,7 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
             if (message.Poll is not { } discordPoll)
                 return await FailAsync(guild, $"Le message {poll.MessageId} n'est plus un sondage Discord (poll {poll.Id}).");
 
-            var nonVoters = await GetNonVoterIdsAsync(guild, channel, message, discordPoll);
+            var nonVoters = await GetNonVoterIdsAsync(guild, guildChannel, message, discordPoll);
             var question = discordPoll.Question.Text ?? "sondage";
             var jumpUrl = $"https://discord.com/channels/{poll.GuildId}/{poll.ChannelId}/{poll.MessageId}";
 
@@ -227,13 +227,24 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
     {
         try
         {
-            var guild = discordClient.GetGuild(KnownPollGuildId);
-            var channel = guild?.GetTextChannel(KnownPollChannelId);
+            IMessageChannel? channel = discordClient.GetChannel(KnownPollChannelId) as IMessageChannel;
+            channel ??= await discordClient.Rest.GetChannelAsync(KnownPollChannelId) as IMessageChannel;
             if (channel is null)
+            {
+                Console.WriteLine($"[VoteService] Salon {KnownPollChannelId} introuvable pour l'import.");
                 return;
+            }
 
-            if (await channel.GetMessageAsync(KnownPollMessageId) is IUserMessage message)
-                await UpsertPollFromMessageAsync(message);
+            if (await channel.GetMessageAsync(KnownPollMessageId) is not IUserMessage message)
+            {
+                Console.WriteLine($"[VoteService] Message {KnownPollMessageId} introuvable.");
+                return;
+            }
+
+            var upserted = await UpsertPollFromMessageAsync(message);
+            Console.WriteLine(upserted is null
+                ? $"[VoteService] Sondage {KnownPollMessageId} ignoré (pas de poll ou déjà clos)."
+                : $"[VoteService] Sondage {KnownPollMessageId} enregistré (id {upserted.Id}, fin {upserted.ExpiresAt}).");
         }
         catch (Exception ex)
         {
@@ -243,26 +254,38 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
 
     private async Task DiscoverAllGuildPollsAsync()
     {
+        Console.WriteLine("[VoteService] Scan des sondages du serveur...");
         foreach (var guild in discordClient.Guilds)
             await DiscoverGuildPollsAsync(guild);
+        Console.WriteLine("[VoteService] Scan terminé.");
     }
 
     private async Task DiscoverGuildPollsAsync(SocketGuild guild)
     {
-        foreach (var channel in guild.TextChannels)
+        var channels = guild.TextChannels
+            .Cast<SocketGuildChannel>()
+            .Concat(guild.ThreadChannels)
+            .DistinctBy(c => c.Id);
+
+        foreach (var guildChannel in channels)
         {
+            if (guildChannel is not SocketTextChannel and not SocketThreadChannel)
+                continue;
+            if (guildChannel is not IMessageChannel messageChannel)
+                continue;
+
             try
             {
-                await DiscoverChannelPollsAsync(channel);
+                await DiscoverChannelPollsAsync(messageChannel);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[VoteService] Scan {channel.Name} : {ex.Message}");
+                Console.WriteLine($"[VoteService] Scan {guildChannel.Name} : {ex.Message}");
             }
         }
     }
 
-    private async Task DiscoverChannelPollsAsync(SocketTextChannel channel)
+    private async Task DiscoverChannelPollsAsync(IMessageChannel channel)
     {
         await foreach (var batch in channel.GetMessagesAsync(DiscoverMessageLimit))
         {
@@ -274,12 +297,12 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
         }
     }
 
-    private async Task<IUserMessage?> FetchPollMessageAsync(SocketGuild guild, SocketTextChannel currentChannel, ulong messageId)
+    private async Task<IUserMessage?> FetchPollMessageAsync(SocketGuild guild, IMessageChannel currentChannel, ulong messageId)
     {
         if (await currentChannel.GetMessageAsync(messageId) is IUserMessage inCurrent)
             return inCurrent;
 
-        foreach (var channel in guild.TextChannels)
+        foreach (var channel in guild.TextChannels.Cast<IMessageChannel>().Concat(guild.ThreadChannels))
         {
             if (channel.Id == currentChannel.Id)
                 continue;
@@ -293,6 +316,17 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
             {
                 // Salon inaccessible
             }
+        }
+
+        try
+        {
+            if (await discordClient.Rest.GetChannelAsync(KnownPollChannelId) is IMessageChannel known
+                && await known.GetMessageAsync(messageId) is IUserMessage knownMsg)
+                return knownMsg;
+        }
+        catch
+        {
+            // ignore
         }
 
         return null;
@@ -365,7 +399,7 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
 
     private async Task<List<ulong>> GetNonVoterIdsAsync(
         SocketGuild guild,
-        SocketTextChannel channel,
+        SocketGuildChannel channel,
         IUserMessage message,
         Poll discordPoll)
     {

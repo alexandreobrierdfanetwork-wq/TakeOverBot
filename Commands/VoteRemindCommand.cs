@@ -29,7 +29,7 @@ public class VoteRemindCommand(VoteService voteService) : ISlashCommand
     {
         await command.DeferAsync(ephemeral: true);
 
-        if (command.Channel is not SocketTextChannel channel)
+        if (command.Channel is not IMessageChannel channel)
         {
             await command.FollowupAsync("❌ Cette commande doit être utilisée dans un canal textuel.", ephemeral: true);
             return;
