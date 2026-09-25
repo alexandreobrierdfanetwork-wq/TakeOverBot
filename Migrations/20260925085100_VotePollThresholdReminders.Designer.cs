@@ -122,12 +122,6 @@ namespace TakeOverBot.Migrations
                     b.Property<bool>("Remind72Sent")
                         .HasColumnType("INTEGER");
 
-                    b.Property<long>("RemindAt")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("ReminderSent")
-                        .HasColumnType("INTEGER");
-
                     b.Property<ulong>("TargetRoleId")
                         .HasColumnType("INTEGER");
 

@@ -29,8 +29,4 @@ public class VotePoll
     public bool Remind24Sent { get; set; }
 
     public bool Remind3Sent { get; set; }
-
-    public long RemindAt { get; set; }
-
-    public bool ReminderSent { get; set; }
 }
