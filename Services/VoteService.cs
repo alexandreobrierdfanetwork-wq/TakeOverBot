@@ -33,7 +33,10 @@ public record VoteRemindResult(bool Success, string Message, int NonVoterCount =
     public static VoteRemindResult Fail(string message) => new(false, message);
 }
 
-public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient discordClient)
+public class VoteService(
+    IServiceScopeFactory scopeFactory,
+    DiscordSocketClient discordClient,
+    VoteRecapService voteRecapService)
 {
     public const ulong KnownPollGuildId = 1192249336885678130;
     public const ulong KnownPollChannelId = 1202728633555353600;
@@ -65,6 +68,7 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
         await ImportKnownPollAsync();
         await DiscoverAllGuildPollsAsync();
         await CheckPollsAsync();
+        await voteRecapService.OnReadyAsync();
     }
 
     public async Task<VotePoll?> FindActivePollAsync(ulong guildId, ulong? channelId = null, ulong? messageId = null)
@@ -187,6 +191,9 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
             if (kind == RemindKind.Expired)
             {
                 await channel.SendMessageAsync("⏰ **Fin du vote !**");
+                await guild.DownloadUsersAsync();
+                await voteRecapService.TryRecordPollClosureAsync(
+                    guild, guildChannel, message, discordPoll, poll);
                 return VoteRemindResult.Ok(0);
             }
 
@@ -361,10 +368,15 @@ public class VoteService(IServiceScopeFactory scopeFactory, DiscordSocketClient 
             .Where(p => p.ExpiresAt <= now)
             .ToListAsync();
 
+        var toRemove = new List<VotePoll>();
         foreach (var poll in expired)
+        {
             await RemindPollAsync(poll, RemindKind.Expired);
+            if (await voteRecapService.CanDeletePollAfterExpiryAsync(poll))
+                toRemove.Add(poll);
+        }
 
-        dbContext.VotePolls.RemoveRange(expired);
+        dbContext.VotePolls.RemoveRange(toRemove);
         await dbContext.SaveChangesAsync();
     }
 

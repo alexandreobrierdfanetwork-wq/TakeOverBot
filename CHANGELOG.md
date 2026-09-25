@@ -15,6 +15,8 @@ Updates should follow the [Keep a CHANGELOG](https://keepachangelog.com/) princi
   - Sans option : dernier sondage actif du salon.
 - Découverte automatique de tous les sondages Discord du serveur (scan, nouveaux messages, import du sondage existant).
 - Rappels automatiques **72 h, 24 h et 3 h** avant la fin d'un sondage non clos (si la durée le permet).
+- Rapport de participation aux votes : à chaque clôture dans `#vote-admin` ou `#vote-crew`, enregistrement des votants / absents (membres avec accès au salon), puis édition d'un message unique dans `DISCORD_IDS_CHANNELS_VOTE_RECAP`.
+- `/resetparticipation` (**Admin**) : remet à zéro la période du rapport (`confirmer: true` obligatoire).
 
 ### Fixed
 - Les rappels ne se limitent plus aux sondages créés via `/vote` ni au rôle Staff/Admin.

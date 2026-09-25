@@ -18,6 +18,9 @@ This bot will probably don't have a lot of command as it needs to be basic to us
 - **Admin** : `/mute {user} {duration} {days or hours}` Mute a user for a specific duration.
 - **Admin or Staff** : `/vote {role} {question} {choices (separated by commas)} {duration} {enable multi select}` Create a poll in the current channel and mention a role the bot can ping.
 - **Admin or Staff** : `/rappelvote {message id (optional)}` Ping and DM members who can see the channel and have not voted. Without `message_id` it targets the latest active poll in the current channel. Automatic reminders also run 72h, 24h and 3h before a poll ends.
+- **Admin** : `/resetparticipation {confirmer}` Reset the participation report period (`confirmer: true` required). Updates the recap message in `DISCORD_IDS_CHANNELS_VOTE_RECAP`.
+
+Polls closed in `#vote-admin` or `#vote-crew` (`DISCORD_IDS_CHANNELS_VOTE_ADMIN` / `DISCORD_IDS_CHANNELS_VOTE_STAFF`) record who voted among members who can see that channel. A single recap message in `DISCORD_IDS_CHANNELS_VOTE_RECAP` is edited after each such poll ends (counts since last reset or since the feature was deployed).
 - **Admin or Perm Bot** : `/send {channel} {message}` Send a message as the bot only if the user as a specific role.
 - `/contact {staff or admin}` Create a specific channel for the user to contact the staff or the admin.
 - `/endContact` Close the contact channel.

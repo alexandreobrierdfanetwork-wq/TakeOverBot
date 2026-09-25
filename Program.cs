@@ -64,6 +64,7 @@ var services = new ServiceCollection()
     .AddHttpClient()
     .AddSingleton(client)
     .AddSingleton<FacebookService>()
+    .AddSingleton<VoteRecapService>()
     .AddSingleton<VoteService>()
     .AddDbContext<AppDbContext>(o => o.UseSqlite($"Data Source={databasePath}"))
     .BuildServiceProvider();
