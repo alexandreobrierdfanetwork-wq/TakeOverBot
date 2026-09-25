@@ -7,6 +7,7 @@ Updates should follow the [Keep a CHANGELOG](https://keepachangelog.com/) princi
 ## Unreleased
 
 ### Added
+- `/vote` accepte un **sélecteur de rôle** (rôles que le bot peut mentionner) et publie le sondage dans le **salon courant**, au lieu de Staff/Admin + salons vote dédiés.
 - `/rappelvote` command
   - **Admin and Staff Only**
   - Relance les membres qui **voient le salon** et n'ont pas voté : @ dans le salon + message privé avec le lien du sondage.

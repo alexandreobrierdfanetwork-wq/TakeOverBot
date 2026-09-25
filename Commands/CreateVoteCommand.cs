@@ -8,30 +8,22 @@ using TakeOverBot.Services;
 namespace TakeOverBot.Commands;
 
 /// <summary>
-/// Create vote command aims to create a poll in a given channel.
-/// This command is restricted to administrators or staff.
-/// This command will also save the poll in the database for later relance.
+/// Create vote command aims to create a poll in the current channel,
+/// mentioning a role the bot is allowed to ping.
 /// </summary>
-/// <param name="scopeFactory">Used to get DbContext</param>
 public class CreateVoteCommand(IServiceScopeFactory scopeFactory, VoteService voteService) : ISlashCommand
 {
     public string Name => "vote";
     public string Icon => "🗳️";
-    public string Description => "Crée un sondage Discord dans un channel";
+    public string Description => "Crée un sondage Discord dans le salon actuel";
     public string[] AllowedRoleIds => ["DISCORD_IDS_ROLES_ADMIN", "DISCORD_IDS_ROLES_STAFF"];
 
     public ISlashCommandOption[] Options =>
     [
         new SlashCommandOption(
-            Name: "cible",
-            Description: "Qui contacter ?",
-            Type: ApplicationCommandOptionType.String,
-            IsRequired: true,
-            Choices:
-            [
-                ("Staff", "staff"),
-                ("Admin", "admin")
-            ]
+            Name: "role",
+            Description: "Rôle à mentionner (parmi ceux que le bot peut ping)",
+            Type: ApplicationCommandOptionType.Role
         ),
         new SlashCommandOption(
             "question",
@@ -61,19 +53,25 @@ public class CreateVoteCommand(IServiceScopeFactory scopeFactory, VoteService vo
     {
         await command.DeferAsync(ephemeral: true);
 
-        var staffRoleId = Environment.GetEnvironmentVariable("DISCORD_IDS_ROLES_STAFF");
-        var adminRoleId = Environment.GetEnvironmentVariable("DISCORD_IDS_ROLES_ADMIN");
+        if (command.Channel is not IMessageChannel channel)
+        {
+            await command.FollowupAsync("❌ Cette commande doit être utilisée dans un canal textuel.", ephemeral: true);
+            return;
+        }
+
         var guildUser = command.User as SocketGuildUser;
-
-        var isAdmin = guildUser!.Roles.Any(r => r.Id.ToString() == adminRoleId);
-
+        var guild = guildUser!.Guild;
         var options = command.Data.Options.ToDictionary(o => o.Name, o => o.Value);
 
-        var cible = options["cible"] as string;
-
-        if (cible == "admin" && !isAdmin)
+        if (options["role"] is not SocketRole targetRole)
         {
-            await command.FollowupAsync("❌ Seuls les admins peuvent créer un sondage à destination des admins.", ephemeral: true);
+            await command.FollowupAsync("❌ Rôle invalide.", ephemeral: true);
+            return;
+        }
+
+        if (!CanBotMention(guild, targetRole, out var reason))
+        {
+            await command.FollowupAsync($"❌ {reason}", ephemeral: true);
             return;
         }
 
@@ -84,7 +82,7 @@ public class CreateVoteCommand(IServiceScopeFactory scopeFactory, VoteService vo
 
         var answers = choixRaw
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Take(10) // Select only the first 10 choices
+            .Take(10)
             .Select(c => new PollMediaProperties { Text = c })
             .ToList();
 
@@ -96,16 +94,6 @@ public class CreateVoteCommand(IServiceScopeFactory scopeFactory, VoteService vo
 
         duree = Math.Clamp(duree, 1, 768);
 
-        var targetRoleIdString = cible == "admin" ? adminRoleId : staffRoleId;
-        var targetRoleId = ulong.Parse(targetRoleIdString ?? "0");
-
-        var voteChannelEnvKey = cible == "admin" ? "DISCORD_IDS_CHANNELS_VOTE_ADMIN" : "DISCORD_IDS_CHANNELS_VOTE_STAFF";
-        var voteChannelId = ulong.Parse(Environment.GetEnvironmentVariable(voteChannelEnvKey) ?? "0");
-
-        var guild = guildUser.Guild;
-        var targetRole = guild.GetRole(targetRoleId);
-        var channel = guild.GetTextChannel(voteChannelId);
-
         var poll = new PollProperties
         {
             Question = new PollMediaProperties { Text = question },
@@ -115,10 +103,15 @@ public class CreateVoteCommand(IServiceScopeFactory scopeFactory, VoteService vo
             LayoutType = PollLayout.Default
         };
 
-        await channel.SendMessageAsync(text: targetRole!.Mention, poll: poll);
+        var allowedMentions = new AllowedMentions(AllowedMentionTypes.None)
+        {
+            RoleIds = [targetRole.Id]
+        };
 
-        var sentMessages = await channel.GetMessagesAsync(1).FlattenAsync();
-        var sentMessage = sentMessages.First();
+        var sentMessage = await channel.SendMessageAsync(
+            text: targetRole.Mention,
+            poll: poll,
+            allowedMentions: allowedMentions);
 
         if (sentMessage is IUserMessage userMessage)
         {
@@ -143,6 +136,39 @@ public class CreateVoteCommand(IServiceScopeFactory scopeFactory, VoteService vo
             await dbContext.SaveChangesAsync();
         }
 
-        await command.FollowupAsync($"✅ Sondage créé avec **{answers.Count} choix** dans {channel.Mention} !", ephemeral: true);
+        await command.FollowupAsync(
+            $"✅ Sondage créé avec **{answers.Count} choix** pour {targetRole.Mention} dans <#{channel.Id}> !",
+            ephemeral: true);
+    }
+
+    private static bool CanBotMention(SocketGuild guild, SocketRole role, out string reason)
+    {
+        if (role.IsEveryone)
+        {
+            reason = "Le rôle @everyone n'est pas autorisé.";
+            return false;
+        }
+
+        var bot = guild.CurrentUser;
+        if (bot is null)
+        {
+            reason = "Impossible de vérifier les permissions du bot.";
+            return false;
+        }
+
+        if (role.Position >= bot.Hierarchy)
+        {
+            reason = $"Je ne peux pas mentionner le rôle **{role.Name}** (rôle trop élevé par rapport au bot).";
+            return false;
+        }
+
+        if (role.IsManaged && !role.IsMentionable && !bot.GuildPermissions.MentionEveryone)
+        {
+            reason = $"Je ne peux pas mentionner le rôle géré **{role.Name}**.";
+            return false;
+        }
+
+        reason = string.Empty;
+        return true;
     }
 }
