@@ -107,8 +107,12 @@ client.Log += msg =>
 client.Ready += async () =>
 {
     await handler.RegisterCommandsAsync();
-    await voteService.OnReadyAsync();
     Console.WriteLine("Commandes et listeners enregistrés !");
+    _ = Task.Run(async () =>
+    {
+        try { await voteService.OnReadyAsync(); }
+        catch (Exception e) { Console.WriteLine($"[VoteService] OnReady : {e.Message}"); }
+    });
 };
 
 client.SlashCommandExecuted += handler.HandleInteractionAsync;
