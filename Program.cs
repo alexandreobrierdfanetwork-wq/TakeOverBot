@@ -7,6 +7,9 @@ using TakeOverBot;
 using TakeOverBot.Handler;
 using TakeOverBot.Services;
 
+Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
+Console.SetError(new StreamWriter(Console.OpenStandardError()) { AutoFlush = true });
+
 Env.Load(".env");
 Env.Load(".env.local");
 

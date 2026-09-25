@@ -48,14 +48,6 @@ namespace TakeOverBot.Migrations
                 nullable: false,
                 defaultValue: false);
 
-            migrationBuilder.DropColumn(
-                name: "RemindAt",
-                table: "VotePolls");
-
-            migrationBuilder.DropColumn(
-                name: "ReminderSent",
-                table: "VotePolls");
-
             migrationBuilder.CreateIndex(
                 name: "IX_VotePolls_MessageId",
                 table: "VotePolls",
@@ -85,20 +77,6 @@ namespace TakeOverBot.Migrations
             migrationBuilder.DropColumn(
                 name: "Remind3Sent",
                 table: "VotePolls");
-
-            migrationBuilder.AddColumn<long>(
-                name: "RemindAt",
-                table: "VotePolls",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: 0L);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "ReminderSent",
-                table: "VotePolls",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false);
         }
     }
 }
